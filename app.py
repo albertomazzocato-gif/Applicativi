@@ -20,7 +20,7 @@ str_app.page_link("https://applicativi-s3drpw6hdt6rqxzmwdpprz.streamlit.app/", l
 str_app.page_link("https://applicativi-uzkwbpzwvfc6gtbg8mtrsp.streamlit.app/", label="Compensi per Avvocati", icon="⚖️")
 str_app.page_link("https://applicativi-ecihnvbseondgzcmlttcng.streamlit.app/", label="Gestionale di Magazzino", icon="📦")
 str_app.page_link("https://applicativi-pzvnvsrqnwgqsxznbcaxre.streamlit.app/", label="Preventivi per Imbianchini", icon="🖌️")
-str_app.page_link("https://applicativi-7nxttf7zevjteyx8pypepm.streamlit.app/", label="Log Book Radioamatori", icon="📻")
+str_app.page_link("https://applicativi-grdvteerdiq7pgt35tdwgz.streamlit.app/", label="Log Book Radioamatori", icon="📻")
 
 str_app.markdown("---")
 
