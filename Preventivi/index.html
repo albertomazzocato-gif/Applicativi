@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore Preventivi</title>
+    <!-- Collegamento alla PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Preventivi">
+
+    <!-- Libreria per il download del PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #334155;
+            --border: #cbd5e1;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .wrapper {
+            max-width: 750px;
+            margin: 0 auto;
+        }
+        .sheet {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            border: 1px solid var(--border);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .header div { flex: 1; }
+        .header div:last-child { text-align: right; }
+        
+        h2 { font-size: 1.5rem; margin: 0 0 5px 0; color: var(--primary); letter-spacing: -0.5px; }
+        h3 { font-size: 1.1rem; color: var(--primary); margin-top: 30px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        
+        label { display: block; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; color: #64748b; margin-top: 12px; margin-bottom: 4px; }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            background: #fff;
+            color: var(--text);
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .row { display: flex; gap: 15px; }
+        .row > div { flex: 1; }
+        
+        .item-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        
+        .btn {
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-add { background: #475569; font-size: 0.9rem; padding: 10px; margin-top: 10px; width: auto; }
+        .btn-pdf { background: #dc2626; margin-top: 25px; }
+        .btn-pdf:hover { background: #b91c1c; }
+        .btn-wa { background: #16a34a; margin-top: 10px; }
+        .btn-wa:hover { background: #15803d; }
+        .btn-danger { background: #ef4444; width: auto; padding: 4px 10px; font-size: 0.75rem; position: absolute; top: 12px; right: 12px; border-radius: 4px; color: white; cursor: pointer; border: none;}
+        
+        .totals-box {
+            margin-top: 25px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+        .total-row.final {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary);
+            border-top: 2px solid var(--border);
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="sheet" id="areaStampa">
+        <div class="header">
+            <div>
+                <label>Emittente</label>
+                <!-- Input senza valore predefinito, memorizzato in tempo reale con localStorage -->
+                <input type="text" id="aziendaMittente" placeholder="Inserisci il nome della tua ditta..." style="font-weight: bold; font-size: 1.1rem;" oninput="localStorage.setItem('nomeDitta', this.value)">
+            </div>
+            <div>
+                <label>Data</label>
+                <input type="date" id="dataPreventivo">
+            </div>
+        </div>
+
+        <label>Spettabile Cliente</label>
+        <input type="text" id="cliente" placeholder="Nome Azienda o Cliente">
+
+        <label>Oggetto / Lavoro</label>
+        <textarea id="descrizioneLavoro" rows="2" placeholder="Descrizione generale dei lavori..."></textarea>
+
+        <h3>Dettaglio Voci</h3>
+        <div id="vociContainer"></div>
+        
+        <button class="btn btn-add" onclick="aggiungiVoce()">+ Aggiungi Riga Articolo</button>
+
+        <div class="totals-box">
+            <div class="total-row">
+                <span>Imponibile:</span>
+                <span><span id="valImponibile">0,00</span> €</span>
+            </div>
+            <div class="total-row" style="align-items: center;">
+                <span>IVA:</span>
+                <select id="aliquotaIva" onchange="calcolaTotali()" style="width: 100px; padding: 4px;">
+                    <option value="22">22%</option>
+                    <option value="10">10%</option>
+                    <option value="4">4%</option>
+                    <option value="0">0% (Esente)</option>
+                </select>
+            </div>
+            <div class="total-row">
+                <span>Imposta IVA:</span>
+                <span><span id="valIva">0,00</span> €</span>
+            </div>
+            <div class="total-row final">
+                <span>Totale Complessivo:</span>
+                <span><span id="valTotale">0,00</span> €</span>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-pdf" onclick="scaricaPDF()">📥 Scarica File PDF</button>
+    <button class="btn btn-wa" onclick="inviaWhatsApp()">💬 Invia Testo via WhatsApp</button>
+</div>
+
+<script>
+    document.getElementById('dataPreventivo').valueAsDate = new Date();
+
+    // Al caricamento ripristina il nome ditta salvato in precedenza (se presente)
+    window.addEventListener('DOMContentLoaded', () => {
+        const dittaSalvata = localStorage.getItem('nomeDitta');
+        if (dittaSalvata) {
+            document.getElementById('aziendaMittente').value = dittaSalvata;
+        }
+        aggiungiVoce();
+    });
+
+    function aggiungiVoce(desc = '', prezzo = '', qta = '1') {
+        const container = document.getElementById('vociContainer');
+        const div = document.createElement('div');
+        div.className = 'item-box';
+        div.innerHTML = `
+            <button class="btn-danger" onclick="this.parentElement.remove(); calcolaTotali();">Rimuovi</button>
+            <label>Descrizione Servizio / Materiale</label>
+            <input type="text" class="item-desc" value="${desc}" placeholder="Descrizione dettagliata..." oninput="calcolaTotali()">
+            <div class="row" style="margin-top: 8px;">
+                <div>
+                    <label>Prezzo Unitario (€)</label>
+                    <input type="number" class="item-price" value="${prezzo}" placeholder="0.00" oninput="calcolaTotali()">
+                </div>
+                <div>
+                    <label>Quantità</label>
+                    <input type="number" class="item-qta" value="${qta}" placeholder="1" oninput="calcolaTotali()">
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+        calcolaTotali();
+    }
+
+    function calcolaTotali() {
+        let imponibile = 0;
+        const items = document.querySelectorAll('.item-box');
+        items.forEach(item => {
+            const p = parseFloat(item.querySelector('.item-price').value) || 0;
+            const q = parseFloat(item.querySelector('.item-qta').value) || 0;
+            imponibile += p * q;
+        });
+
+        const percIva = parseFloat(document.getElementById('aliquotaIva').value) || 0;
+        const iva = imponibile * (percIva / 100);
+        const totale = imponibile + iva;
+
+        document.getElementById('valImponibile').innerText = imponibile.toFixed(2);
+        document.getElementById('valIva').innerText = iva.toFixed(2);
+        document.getElementById('valTotale').innerText = totale.toFixed(2);
+    }
+
+    function scaricaPDF() {
+        const element = document.getElementById('areaStampa');
+        const clienteInput = document.getElementById('cliente').value.trim();
+        const nomeFile = clienteInput ? `Preventivo_${clienteInput.replace(/[^a-zA-Z0-9]/g, '_')}.pdf` : 'Preventivo.pdf';
+
+        const opt = {
+            margin:       10,
+            filename:     nomeFile,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, logging: false },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().from(element).set(opt).save();
+    }
+
+    function inviaWhatsApp() {
+        const azienda = document.getElementById('aziendaMittente').value || 'Azienda';
+        const data = document.getElementById('dataPreventivo').value;
+        const cliente = document.getElementById('cliente').value || 'Cliente';
+        const lavoro = document.getElementById('descrizioneLavoro').value;
+        
+        let testo = `*PREVENTIVO* - ${azienda}\n`;
+        testo += `Data: ${data}\n`;
+        testo += `Spett.le: *${cliente}*\n`;
+        if(lavoro) testo += `Oggetto: ${lavoro}\n`;
+        testo += `------------------\n`;
+
+        const items = document.querySelectorAll('.item-box');
+        items.forEach((item, index) => {
+            const desc = item.querySelector('.item-desc').value || 'Voce ' + (index+1);
+            const p = parseFloat(item.querySelector('.item-price').value) || 0;
+            const q = parseFloat(item.querySelector('.item-qta').value) || 0;
+            const sub = p * q;
+            testo += `• ${desc} (${q} x ${p.toFixed(2)}€) = *${sub.toFixed(2)} €*\n`;
+        });
+
+        const imp = document.getElementById('valImponibile').innerText;
+        const ivaVal = document.getElementById('valIva').innerText;
+        const ivaPerc = document.getElementById('aliquotaIva').value;
+        const tot = document.getElementById('valTotale').innerText;
+
+        testo += `------------------\n`;
+        testo += `Imponibile: ${imp} €\n`;
+        testo += `IVA (${ivaPerc}%): ${ivaVal} €\n`;
+        testo += `*TOTALE COMPLESSIVO: ${tot} €*`;
+
+        const urlWp = `https://api.whatsapp.com/send?text=${encodeURIComponent(testo)}`;
+        window.open(urlWp, '_blank');
+    }
+
+    // Registrazione Service Worker per la PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registrato con successo:', reg.scope))
+                .catch(err => console.log('Errore registrazione Service Worker:', err));
+        });
+    }
+</script>
+
+</body>
+</html>
